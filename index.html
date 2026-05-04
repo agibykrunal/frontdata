@@ -1,1 +1,540 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notes App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --surface2: #1e1e1e;
+      --border: #2a2a2a;
+      --accent: #e8c97a;
+      --accent2: #c9965a;
+      --text: #f0ece3;
+      --muted: #6e6860;
+      --danger: #c0574a;
+      --success: #5a9e6f;
+      --api: http://localhost:3001;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 10%, rgba(232,201,122,0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 70% at 85% 85%, rgba(201,150,90,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .wrapper {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+    }
+
+    /* ── Header ── */
+    header { margin-bottom: 52px; }
+
+    .tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 15px;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    /* ── Connection status bar ── */
+    #connStatus {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 7px 14px;
+      border-radius: 100px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      transition: all 0.3s;
+    }
+
+    #connStatus .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+
+    #connStatus.connected .dot   { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    #connStatus.error .dot       { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
+
+    /* ── Form card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent), transparent);
+    }
+
+    .form-group { margin-bottom: 22px; }
+
+    label {
+      display: block;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      resize: none;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      border-color: rgba(232,201,122,0.5);
+      box-shadow: 0 0 0 3px rgba(232,201,122,0.08);
+    }
+
+    textarea { min-height: 120px; line-height: 1.6; }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 28px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #0d0d0d;
+      box-shadow: 0 4px 20px rgba(232,201,122,0.2);
+    }
+
+    .btn-save:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(232,201,122,0.3); }
+    .btn-save:active { transform: scale(0.98); }
+    .btn-save:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(13,13,13,0.3);
+      border-top-color: #0d0d0d;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-save.loading .spinner { display: block; }
+    .btn-save.loading .btn-text { display: none; }
+
+    /* ── Section header ── */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      background: rgba(232,201,122,0.1);
+      border: 1px solid rgba(232,201,122,0.2);
+      border-radius: 100px;
+      padding: 2px 10px;
+    }
+
+    /* ── Notes list ── */
+    #notesList { display: flex; flex-direction: column; gap: 14px; }
+
+    .note-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      animation: fadeIn 0.3s ease;
+      transition: border-color 0.2s;
+    }
+
+    .note-item:hover { border-color: rgba(232,201,122,0.2); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .note-body { flex: 1; min-width: 0; }
+
+    .note-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .note-content {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .note-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0.5;
+      margin-top: 10px;
+    }
+
+    .note-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+
+    .btn-delete {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 6px 9px;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+
+    .btn-delete:hover {
+      color: var(--danger);
+      border-color: rgba(192,87,74,0.3);
+      background: rgba(192,87,74,0.07);
+    }
+
+    
+    .state-box {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--muted);
+    }
+    .state-box .icon { font-size: 40px; margin-bottom: 12px; }
+    .state-box p { font-size: 14px; line-height: 1.6; }
+    .state-box code {
+      background: var(--surface2);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      z-index: 100;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { background: var(--success); color: white; }
+    #toast.error   { background: var(--danger);  color: white; }
+    #toast.info    { background: #2a4a7f; color: white; }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+
+  <header>
+    <div class="tag">// Node.js + PostgreSQL + pgAdmin</div>
+    <h1>Notes App</h1>
+    <p class="subtitle">Enter a note below — it gets saved directly to your PostgreSQL database.</p>
+    <div id="connStatus">
+      <div class="dot"></div>
+      <span id="connText">Checking connection...</span>
+    </div>
+  </header>
+
+ 
+  <div class="card">
+    <div class="form-group">
+      <label for="titleInput">Title</label>
+      <input type="text" id="titleInput" placeholder="e.g. Meeting notes, Ideas, Reminders..." autocomplete="off"/>
+    </div>
+    <div class="form-group">
+      <label for="contentInput">Content</label>
+      <textarea id="contentInput" placeholder="Write your note content here..."></textarea>
+    </div>
+    <div class="form-row">
+      <button class="btn btn-save" id="saveBtn" onclick="saveNote()">
+        <span class="btn-text">✦ Save to PostgreSQL</span>
+        <div class="spinner"></div>
+      </button>
+      <span class="hint">or Ctrl + Enter</span>
+    </div>
+  </div>
+
+  <!-- Notes List -->
+  <div class="section-header">
+    <span class="section-title">Saved Notes</span>
+    <span class="badge" id="countBadge">0</span>
+  </div>
+  <div id="notesList">
+    <div class="state-box">
+      <div class="icon">⏳</div>
+      <p>Loading from database...</p>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  
+  const API = "http://localhost:3001/api";
+
+  
+  function toast(msg, type = "success") {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    setTimeout(() => el.className = "", 3200);
+  }
+
+  
+  async function checkHealth() {
+    const el = document.getElementById("connStatus");
+    const txt = document.getElementById("connText");
+    try {
+      const res = await fetch(`${API}/health`);
+      const json = await res.json();
+      el.className = "connected";
+      txt.textContent = "Connected to backend ✓";
+    } catch {
+      el.className = "error";
+      txt.textContent = "Backend not reachable — run: node server.js";
+    }
+  }
+
+  // ── Load all notes ──
+  async function loadNotes() {
+    try {
+      const res = await fetch(`${API}/notes`);
+      const json = await res.json();
+      if (json.success) renderNotes(json.data);
+      else throw new Error(json.error);
+    } catch (e) {
+      document.getElementById("notesList").innerHTML = `
+        <div class="state-box">
+          <div class="icon">⚠️</div>
+          <p>
+            Cannot reach backend.<br><br>
+            Make sure you ran:<br>
+            <code>cd backend</code> → <code>npm install</code> → <code>node server.js</code><br><br>
+            Also check your <code>.env</code> credentials match pgAdmin.
+          </p>
+        </div>`;
+      document.getElementById("countBadge").textContent = "0";
+    }
+  }
+
+ 
+  function renderNotes(notes) {
+    const list = document.getElementById("notesList");
+    document.getElementById("countBadge").textContent = notes.length;
+
+    if (!notes.length) {
+      list.innerHTML = `
+        <div class="state-box">
+          <div class="icon">✏️</div>
+          <p>No notes yet. Create your first one above!</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = notes.map(n => `
+      <div class="note-item" id="note-${n.id}">
+        <div class="note-body">
+          <div class="note-title">${esc(n.title)}</div>
+          <div class="note-content">${esc(n.content)}</div>
+          <div class="note-id">ID: ${n.id}</div>
+          <div class="note-meta">${new Date(n.created_at).toLocaleString("en-IN", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit"
+          })}</div>
+        </div>
+        <button class="btn-delete" onclick="deleteNote(${n.id})" title="Delete note">✕</button>
+      </div>
+    `).join("");
+  }
+
+  // ── Save note ──
+  async function saveNote() {
+    const title   = document.getElementById("titleInput").value.trim();
+    const content = document.getElementById("contentInput").value.trim();
+    const btn     = document.getElementById("saveBtn");
+
+    if (!title || !content) {
+      toast("Please fill in both title and content.", "error");
+      return;
+    }
+
+    btn.classList.add("loading");
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${API}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content })
+      });
+      const json = await res.json();
+
+      if (json.success) {
+        document.getElementById("titleInput").value   = "";
+        document.getElementById("contentInput").value = "";
+        toast(`✓ Saved! ID: ${json.data.id} — check pgAdmin → notes table`);
+        loadNotes();
+      } else {
+        toast(json.error || "Failed to save.", "error");
+      }
+    } catch (e) {
+      toast("Cannot reach backend. Is server.js running?", "error");
+    } finally {
+      btn.classList.remove("loading");
+      btn.disabled = false;
+    }
+  }
+
+ 
+  async function deleteNote(id) {
+    try {
+      const res  = await fetch(`${API}/notes/${id}`, { method: "DELETE" });
+      const json = await res.json();
+      if (json.success) {
+        toast(`🗑 Note ${id} deleted.`, "info");
+        loadNotes();
+      }
+    } catch {
+      toast("Delete failed.", "error");
+    }
+  }
+
+  document.getElementById("contentInput").addEventListener("keydown", e => {
+    if (e.ctrlKey && e.key === "Enter") saveNote();
+  });
+
+  function esc(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+ 
+  checkHealth();
+  loadNotes();
+</script>
+</body>
+</html>
